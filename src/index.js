@@ -26,8 +26,8 @@ const MAXLEN = 400;
 app.get('/dex', function (req, res) {
     let out = "";
     out += unifont(`🎲RANDOM🎲 `, 'boldscript');
-    let p = dex.getRandom();
-    out += printPokemon(p, MAXLEN - PREFIX.length - out.length);
+    let pokemon = dex.getRandom();
+    out += printPokemon(pokemon, MAXLEN - PREFIX.length - out.length);
     out = limit(PREFIX + out, MAXLEN);
 
     res.set({
@@ -52,73 +52,77 @@ app.get('/dex/help', function (req, res) {
     res.send(out);
 });
 
-app.get('/dex/:q', function (req, res) {
-    let out = '';
-    var q = String(req.params.q).trim();
-    if (q.match(/^!\w+ ?/)) q = q.replace(/^!\w+ ?/, ''); // remove !dex prefix if present because streamelements includes it
-    if (q.trim()==='') return res.redirect('/dex');
+app.get('/dex/:q', (req, res) => {
+        let out = '';
+        let query = String(req.params.q).trim();
+        if (query.match(/^!\w+ ?/))
+            query = query.replace(/^!\w+ ?/, ''); // remove !dex prefix if present because streamelements includes it
+        if (query.trim() === '')
+            return res.redirect('/dex');
 
-    const QUERY_BY_TYPE = /^(types?) (.*)/;
-    const QUERY_BY_ABILITY = /^(ability|abilities?) (.*)/;
+        const QUERY_BY_TYPE = /^(types?) (.*)/;
+        const QUERY_BY_ABILITY = /^(ability|abilities?) (.*)/;
 
-    let ee = eastereggs(q);
-    if (ee) {
-        out = ee;
-    }
-    else if (QUERY_BY_TYPE.test(q)) {
-        let t = QUERY_BY_TYPE.exec(q)[2];
+        let ee = eastereggs(query);
+        if (ee) {
+            out = ee;
+        }
+        else if (QUERY_BY_TYPE.test(query)) {
+            let t = QUERY_BY_TYPE.exec(query)[2];
 
-        out += `Searching for pokemons with types that match "${t}": `;
-        let results = dex.findByType(t);
-        if (results.length)
-            out += results.map(p => `#${p.national_id} ${p.names.en}`);
-        else
-            out += `No results!`;
-    }
-    else if (QUERY_BY_ABILITY.test(q)) {
-        let t = QUERY_BY_ABILITY.exec(q)[2];
+            out += `Searching for pokemons with types that match "${t}": `;
+            let results = dex.findByType(t);
+            if (results.length)
+                out += results.map(pokemon => `#${pokemon.national_id} ${pokemon.names.en}`);
 
-        out += `Searching for pokemons with abilities that match "${t}": `;
-        let results = dex.findByAbility(t);
-        if (results.length)
-            out += results.map(p => `#${p.national_id} ${p.names.en}`);
-        else
-            out += `No results!`;
-    }
-    else {
+            else
+                out += `No results!`;
+        }
+        else if (QUERY_BY_ABILITY.test(query)) {
+            let t = QUERY_BY_ABILITY.exec(query)[2];
 
-        let p = dex.find(q)[0];
-        if (p) {
-            out = printPokemon(p, MAXLEN - PREFIX.length);
-        } else { //not found
-            out = unifont(`🕵 This Pokemon is not on the database!`, 'sansbold') + ` (${q})`;
-            let suggestions = dex.suggestions(q);
-            if (suggestions.length) {
-                out += ` 🔮 But you can try ${suggestions.length > 1 ? 'one of these' : 'this one'}: `;
-                out += suggestions.map(p => `🔹${CMD} ${p.names.en}`).join(' ');
-            }
-            else {
-                out += ` Use "${CMD} help" to learn how to use this command!`;
+            out += `Searching for pokemons with abilities that match "${t}": `;
+            let results = dex.findByAbility(t);
+            if (results.length)
+                out += results.map(p => `#${p.national_id} ${p.names.en}`);
+
+            else
+                out += `No results!`;
+        }
+        else {
+
+            let pokemon = dex.find(query)[0];
+            if (pokemon) {
+                out = printPokemon(pokemon, MAXLEN - PREFIX.length);
+            } else { //not found
+                out = unifont(`🕵 This Pokemon is not on the database!`, 'sansbold') + ` (${query})`;
+                let suggestions = dex.suggestions(query);
+                if (suggestions.length) {
+                    out += ` 🔮 But you can try ${suggestions.length > 1 ? 'one of these' : 'this one'}: `;
+                    out += suggestions.map(p => `🔹${CMD} ${p.names.en}`).join(' ');
+                }
+                else {
+                    out += ` Use "${CMD} help" to learn how to use this command!`;
+                }
             }
         }
-    }
 
-    //format me
-    if (out.indexOf('/me') === 0) {
-        out = '/me ' + PREFIX + out.substring(3);
-    }
-    else {
-        out = PREFIX + out;
-    }
+        //format me
+        if (out.indexOf('/me') === 0) {
+            out = '/me ' + PREFIX + out.substring(3);
+        }
+        else {
+            out = PREFIX + out;
+        }
 
-    out = limit(out, MAXLEN);
+        out = limit(out, MAXLEN);
 
-    res.set({
-        'content-type': 'text/plain; charset=utf-8'
+        res.set({
+            'content-type': 'text/plain; charset=utf-8'
+        });
+        res.send(out);
+
     });
-    res.send(out);
-
-});
 
 function limit(str, max) {
     const ellipisis = '…'
@@ -128,7 +132,7 @@ function limit(str, max) {
     return str;
 }
 
-function printPokemon(p, maxlen, options) {
+function printPokemon(pokemon, maxlen, options) {
 
     const ABREV = {
         "hp": "HP",
@@ -139,16 +143,16 @@ function printPokemon(p, maxlen, options) {
         "speed": "SPEED",
     };
 
-    const name = `${p.names.en.toUpperCase()} #${p.national_id}`;
-    const type = unifont('TYPE:', 'sansbold') + p.types.join('/');
-    const abilities = unifont('ABIL:', 'sansbold') + p.abilities.map(a => a.name + (a.hidden ? '*' : '')).join('/');
-    const base_stats = unifont('BASE:', 'sansbold') + Object.keys(p.base_stats).map(a => `${unifont(ABREV[a], 'normal')} ${p.base_stats[a]}`).join('|');
-    const link = `bulbapedia.bulbagarden.net/wiki/${p.names.en.toLowerCase()}`;
-    const dexGen = Object.keys(p.pokedex_entries).random();
-    const quote = unifont(`🗣"${p.pokedex_entries[dexGen].en}"`, 'sansitalic');
+    const name = `${pokemon.names.en.toUpperCase()} #${pokemon.national_id}`;
+    const type = unifont('TYPE:', 'sansbold') + pokemon.types.join('/');
+    const abilities = unifont('ABIL:', 'sansbold') + pokemon.abilities.map(a => a.name + (a.hidden ? '*' : '')).join('/');
+    const base_stats = unifont('BASE:', 'sansbold') + Object.keys(pokemon.base_stats).map(a => `${unifont(ABREV[a], 'normal')} ${pokemon.base_stats[a]}`).join('|');
+    const link = `bulbapedia.bulbagarden.net/wiki/${pokemon.names.en.toLowerCase()}`;
+    const dexGen = Object.keys(pokemon.pokedex_entries).random();
+    const quote = unifont(`🗣"${pokemon.pokedex_entries[dexGen].en}"`, 'sansitalic');
 
-    const evolutionsFrom = p.evolution_from ? `FROM:${p.evolution_from}` : '';
-    const evolutionsTo = printEvolution(p);
+    const evolutionsFrom = pokemon.evolution_from ? `FROM:${pokemon.evolution_from}` : '';
+    const evolutionsTo = printEvolution(pokemon);
 
     const out = [
         name,
@@ -171,19 +175,19 @@ function printPokemon(p, maxlen, options) {
     return out.join(' ');
 }
 
-function printEvolution(p) {
-    if (p.evolutions.length) {
-        return 'EVOLUTION:' + p.evolutions.map(e => {
-            let s = [];
-            if (e.to) s.push(`${e.to}`);
-            if (e.level) s.push(`Lvl:${e.level}`);
-            if (e.conditions) s.push(`Cond:${e.conditions}`);
-            if (e.level_up) s.push(`LvlUp:${e.level_up}`);
-            if (e.trade) s.push(`Trade:${e.trade}`);
-            if (e.happiness) s.push(`Happiness:${e.happiness}`);
-            if (e.hold_item) s.push(`HoldItem:${e.hold_item}`);
-            if (e.move_learned) s.push(`MoveLearned:${e.move_learned}`);
-            return s.join(' ');
+function printEvolution(pokemon) {
+    if (pokemon.evolutions.length) {
+        return 'EVOLUTION:' + pokemon.evolutions.map(evolution => {
+            let search = [];
+            if (evolution.to) search.push(`${evolution.to}`);
+            if (evolution.level) search.push(`Lvl:${evolution.level}`);
+            if (evolution.conditions) search.push(`Cond:${evolution.conditions}`);
+            if (evolution.level_up) search.push(`LvlUp:${evolution.level_up}`);
+            if (evolution.trade) search.push(`Trade:${evolution.trade}`);
+            if (evolution.happiness) search.push(`Happiness:${evolution.happiness}`);
+            if (evolution.hold_item) search.push(`HoldItem:${evolution.hold_item}`);
+            if (evolution.move_learned) search.push(`MoveLearned:${evolution.move_learned}`);
+            return search.join(' ');
         }).join(',');
     }
     return 'EVOLUTION: none';
@@ -215,7 +219,7 @@ String.prototype.format = function () {
     function getDeepVal(obj, path) {
         if (typeof obj === "undefined" || obj === null) return;
         path = path.split(/[\.\[\]\"\']{1,2}/);
-        for (var i = 0, l = path.length; i < l; i++) {
+        for (let i = 0, l = path.length; i < l; i++) {
             if (path[i] === "") continue;
             obj = obj[path[i]];
             if (typeof obj === "undefined" || obj === null) return;
@@ -223,7 +227,7 @@ String.prototype.format = function () {
         return obj;
     }
 
-    var str = this;
+    let str = this;
     if (!arguments.length)
         return str;
     var args = typeof arguments[0],
@@ -235,16 +239,16 @@ String.prototype.format = function () {
 }
 
 
-var tiny = require('tiny-json-http')
+let tiny = require('tiny-json-http')
 
-app.get('/discord', function (req, res) {
-    console.log('/discord ' + JSON.stringify(req.query));
+app.get('/discord', (req, res) => {
+        console.log('/discord ' + JSON.stringify(req.query));
 
-    if (Object.keys(req.query).length === 0) {
-        res.set({
-            'content-type': 'text/html; charset=utf-8'
-        });
-        return res.send(`
+        if (Object.keys(req.query).length === 0) {
+            res.set({
+                'content-type': 'text/html; charset=utf-8'
+            });
+            return res.send(`
 <style>
     #cmd {
         border: 1px solid silver;
@@ -280,100 +284,102 @@ app.get('/discord', function (req, res) {
   </pre>
 </p>
         `);
-    }
-
-
-    function limit(str, max) {
-        const ellipisis = '...';
-        if (str.length > max) {
-            return str.substring(0, max - ellipisis.length) + ellipisis;
         }
-        return str;
-    }
-
-    const TWITCH_MAXLEN = 400;
-    const IS_URL_RE = /^https?:\/\/.*/;
-
-    res.set({
-        'content-type': 'text/plain; charset=utf-8'
-    });
 
 
-    //validate ouput parameter
-    if (!req.query.output) {
-        return res.send(limit("Error! Please provide an 'output' parameter!", TWITCH_MAXLEN));
-    }
-    if (!String(req.query.output).match(IS_URL_RE)) {
-        return res.send(limit(`Error! The value of the 'output' parameter is not valid URL! (${req.query.output})`, TWITCH_MAXLEN));
-    }
-
-    //validate webhook parameter
-    if (!req.query.webhook) {
-        return res.send(limit("Error! Please provide an 'webhook' parameter!", TWITCH_MAXLEN));
-    }
-    if (!String(req.query.webhook).match(IS_URL_RE)) {
-        return res.send(limit(`Error! The value of the 'webhook' parameter is not a valid URL! (${req.query.webhook})`, TWITCH_MAXLEN));
-    }
-
-
-    //fetch options file
-    tiny.get({
-        url: req.query.output,
-    }, (err, data) => {
-
-        var options;
-
-        if (err) {
-            console.error(err, req.query);
-            return res.send(limit("ERROR! Request to 'options' url failed! (" + err + ")", TWITCH_MAXLEN));
-        } else {
-
-            try {
-                options = JSON.parse(data.body);
-            } catch (err) {
-                return res.send(limit("ERROR! 'options' url contain an invalid JSON! (" + err + ")", TWITCH_MAXLEN));
+        function limit(str, max) {
+            const ellipisis = '...';
+            if (str.length > max) {
+                return str.substring(0, max - ellipisis.length) + ellipisis;
             }
+            return str;
+        }
 
-            //empty message
-            if (!req.query.msg || String(req.query.msg).trim() === '') {
-                return res.send(limit(String(options.twitch_reply_empty_msg || 'Please provide `twitch_reply_empty_msg`').format(req.query), TWITCH_MAXLEN));
-            }
-            //if theres a pattern validate msg using it
-            else if (!options.msg_pattern || new RegExp(options.msg_pattern).test(req.query.msg)) {
+        const TWITCH_MAXLEN = 400;
+        const IS_URL_RE = /^https?:\/\/.*/;
 
-                //run pattern and save matches on the match property, so it can be used on the reply template
-                if (options.msg_pattern) {
-                    req.query.match = new RegExp(options.msg_pattern).exec(req.query.msg) || {};
+        res.set({
+            'content-type': 'text/plain; charset=utf-8'
+        });
+
+
+        //validate ouput parameter
+        if (!req.query.output) {
+            return res.send(limit("Error! Please provide an 'output' parameter!", TWITCH_MAXLEN));
+        }
+        if (!String(req.query.output).match(IS_URL_RE)) {
+            return res.send(limit(`Error! The value of the 'output' parameter is not valid URL! (${req.query.output})`, TWITCH_MAXLEN));
+        }
+
+        //validate webhook parameter
+        if (!req.query.webhook) {
+            return res.send(limit("Error! Please provide an 'webhook' parameter!", TWITCH_MAXLEN));
+        }
+        if (!String(req.query.webhook).match(IS_URL_RE)) {
+            return res.send(limit(`Error! The value of the 'webhook' parameter is not a valid URL! (${req.query.webhook})`, TWITCH_MAXLEN));
+        }
+
+
+        //fetch options file
+        tiny.get({
+            url: req.query.output,
+        }, (err, data) => {
+
+            let options;
+
+            if (err) {
+                console.error(err, req.query);
+                return res.send(limit("ERROR! Request to 'options' url failed! (" + err + ")", TWITCH_MAXLEN));
+            } else {
+
+                try {
+                    options = JSON.parse(data.body);
+                } catch (err) {
+                    return res.send(limit("ERROR! 'options' url contain an invalid JSON! (" + err + ")", TWITCH_MAXLEN));
                 }
 
-                //Send the message to discord webhook
-                tiny.post({
-                    url: req.query.webhook,
-                    data: {
-                        "username": limit(String(options.discord_user || 'User: {user}').format(req.query), 32),
-                        "content": limit(String(options.discord_msg || 'Please provide a `discord_msg`').format(req.query), 2000),
-                        "wait": true,
-                        // "avatar_url": "https://orig00.deviantart.net/06cf/f/2016/191/e/8/ash_ketchum_render_by_tzblacktd-da9k0wb.png",
+                //empty message
+                if (!req.query.msg || String(req.query.msg).trim() === '') {
+                    return res.send(limit(String(options.twitch_reply_empty_msg || 'Please provide `twitch_reply_empty_msg`').format(req.query), TWITCH_MAXLEN));
+                }
+
+                //if theres a pattern validate msg using it
+                else if (!options.msg_pattern || new RegExp(options.msg_pattern).test(req.query.msg)) {
+
+                    //run pattern and save matches on the match property, so it can be used on the reply template
+                    if (options.msg_pattern) {
+                        req.query.match = new RegExp(options.msg_pattern).exec(req.query.msg) || {};
                     }
-                }, (err, data) => {
-                    if (err) {
-                        console.error(err, req.query);
-                        res.send(limit("Discord API returned an error! (" + err + ")", TWITCH_MAXLEN));
-                    } else {
-                        var twitchMsg = limit(String(options.twitch_reply || 'Please provide `twitch_reply`').format(req.query), TWITCH_MAXLEN);
-                        res.send(twitchMsg);
-                    }
-                });
+
+                    //Send the message to discord webhook
+                    tiny.post({
+                        url: req.query.webhook,
+                        data: {
+                            "username": limit(String(options.discord_user || 'User: {user}').format(req.query), 32),
+                            "content": limit(String(options.discord_msg || 'Please provide a `discord_msg`').format(req.query), 2000),
+                            "wait": true,
+                            // "avatar_url": "https://orig00.deviantart.net/06cf/f/2016/191/e/8/ash_ketchum_render_by_tzblacktd-da9k0wb.png",
+                        }
+                    }, (err, data) => {
+                        if (err) {
+                            console.error(err, req.query);
+                            res.send(limit("Discord API returned an error! (" + err + ")", TWITCH_MAXLEN));
+                        } else {
+                            let twitchMsg = limit(String(options.twitch_reply || 'Please provide `twitch_reply`').format(req.query), TWITCH_MAXLEN);
+                            res.send(twitchMsg);
+                        }
+                    });
+
+                }
+
+                //message does not match pattern    
+                else {
+                    return res.send(limit(String(options.twitch_reply_invalid_msg || 'Please provide `twitch_reply_invalid_msg`').format(req.query), TWITCH_MAXLEN));
+                }
 
             }
-            //message does not match pattern    
-            else {
-                return res.send(limit(String(options.twitch_reply_invalid_msg || 'Please provide `twitch_reply_invalid_msg`').format(req.query), TWITCH_MAXLEN));
-            }
-
-        }
+        });
     });
-});
 
 
 
