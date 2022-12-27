@@ -4,21 +4,27 @@
 ## Nightbot
 
 Type this in chat:
+
+Replace `URL` for your personal deployed instance
+
 ```
-!commands add !dex $(urlfetch https://victornightbot.herokuapp.com/dex/$(querystring)?ch=$(channel)&user=$(user)&userlevel=$(userlevel)&bot=nightbot)
+!addcom !dex $(urlfetch URL/dex/$(querystring)?ch=$(channel)&user=$(user)&userlevel=$(userlevel)&bot=nightbot)
 ```
 
 or
 
 Add the `!dex` command at https://nightbot.tv/commands/custom
 ```
-$(urlfetch https://victornightbot.herokuapp.com/dex/$(querystring)?ch=$(channel)&user=$(user)&userlevel=$(userlevel)&bot=nightbot)
+$(urlfetch URL/dex/$(querystring)?ch=$(channel)&user=$(user)&userlevel=$(userlevel)&bot=nightbot)
 ```
 
 ## StreamElements
+
+Replace `URL` for your personal deployed instance
+
 Add the `!dex` command at https://streamelements.com/dashboard/bot/commands/custom
 ```
-${urlfetch https://victornightbot.herokuapp.com/dex/${pathescape ${0:}}?ch=${channel}&user=${user}&userlevel=${user.level}&bot=streamelements}
+${urlfetch URL/dex/${pathescape ${0:}}?ch=${channel}&user=${user}&userlevel=${user.level}&bot=streamelements}
 ```
 
 Usage
