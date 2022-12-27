@@ -2,7 +2,7 @@ const _ = require('underscore');
 const express = require('express');
 const path = require('path');
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
 
 // Pokedex imports
 const Dex = require('./dex');
@@ -17,11 +17,6 @@ Array.prototype.random = function () {
 const app = express();
 app.listen(PORT, () => console.log(`Listening on http://localhost:${PORT}`));
 
-// app.use(express.static(path.join(__dirname, 'public')))
-// app.set('views', path.join(__dirname, 'views'))
-// app.set('view engine', 'ejs')
-// app.get('/', (req, res) => res.render('pages/index'))
-
 const dex = new Dex(); //instance
 
 const CMD = '!dex';
@@ -30,7 +25,6 @@ const MAXLEN = 400;
 
 app.get('/dex', function (req, res) {
     let out = "";
-    // out += `Instruction: ${unifont(CMD + ' help', 'sansbold')}. `;
     out += unifont(`🎲RANDOM🎲 `, 'boldscript');
     let p = dex.getRandom();
     out += printPokemon(p, MAXLEN - PREFIX.length - out.length);
@@ -66,7 +60,6 @@ app.get('/dex/:q', function (req, res) {
 
     const QUERY_BY_TYPE = /^(types?) (.*)/;
     const QUERY_BY_ABILITY = /^(ability|abilities?) (.*)/;
-    // const QUERY_EVOLUTION = /^(evolutions?) (.*)/;
 
     let ee = eastereggs(q);
     if (ee) {
@@ -150,9 +143,6 @@ function printPokemon(p, maxlen, options) {
     const type = unifont('TYPE:', 'sansbold') + p.types.join('/');
     const abilities = unifont('ABIL:', 'sansbold') + p.abilities.map(a => a.name + (a.hidden ? '*' : '')).join('/');
     const base_stats = unifont('BASE:', 'sansbold') + Object.keys(p.base_stats).map(a => `${unifont(ABREV[a], 'normal')} ${p.base_stats[a]}`).join('|');
-    const ev_yield = unifont('EVYIELD:', 'sansbold') + Object.keys(p.ev_yield).map(a => `${unifont(ABREV[a], 'normal')} ${p.ev_yield[a]}`).join('|');
-    // const link = `pokemondb.net/pokedex/${p.names.en.toLowerCase()}`;
-    // const link = `pokemon.wikia.com/wiki/${p.names.en.toLowerCase()}`;
     const link = `bulbapedia.bulbagarden.net/wiki/${p.names.en.toLowerCase()}`;
     const dexGen = Object.keys(p.pokedex_entries).random();
     const quote = unifont(`🗣"${p.pokedex_entries[dexGen].en}"`, 'sansitalic');
@@ -167,7 +157,6 @@ function printPokemon(p, maxlen, options) {
         base_stats,
         evolutionsFrom,
         evolutionsTo,
-        // ev_yield,
         quote, // index: 6 (update the quoteIndex variable)
         link,
     ];
@@ -175,7 +164,7 @@ function printPokemon(p, maxlen, options) {
     //limit the quote length
     if (maxlen) {
         const quoteIndex = 6;
-        var overflow = out.join(' ').length - maxlen;
+        let overflow = out.join(' ').length - maxlen;
         if (overflow > 0) out[quoteIndex] = limit(out[quoteIndex], out[quoteIndex].length - overflow);
     }
 
@@ -185,7 +174,7 @@ function printPokemon(p, maxlen, options) {
 function printEvolution(p) {
     if (p.evolutions.length) {
         return 'EVOLUTION:' + p.evolutions.map(e => {
-            var s = [];
+            let s = [];
             if (e.to) s.push(`${e.to}`);
             if (e.level) s.push(`Lvl:${e.level}`);
             if (e.conditions) s.push(`Cond:${e.conditions}`);
